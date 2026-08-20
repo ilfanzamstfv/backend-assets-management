@@ -1,57 +1,56 @@
-import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import express from 'express';
+import authRoutes from './routes/authRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
+import itemRoutes from './routes/itemRoutes.js';
+import masterDataRoutes from './routes/masterDataRoutes.js';
+import purchaseHistoryRoutes from './routes/purchaseHistoryRoutes.js';
+import roleRoutes from './routes/roleRoutes.js';
+import userManagementRoutes from './routes/userManagementRoutes.js';
 import passport from './config/passport.js';
-import {
-    createUser,
-    loginUser,
-    deleteUser,
-    getUserById,
-    getUsers,
-    forgotPassword,
-    verifyResetCode,
-    resetPassword
-} from './controllers/userController.js';
-import { googleCallback, githubCallback } from './controllers/authController.js';
+import { ensureAuthorizationSetup } from './services/bootstrapService.js';
+import { createUser, forgotPassword, loginUser, resetPassword, verifyResetCode } from './controllers/userController.js';
 
-// Konfigurasi dotenv agar bisa membaca file .env
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
 
-// Endpoint Testing (Root Route)
-app.get('/', (req, res) => {
-    res.json({ message: "Welcome to Express.js Backend API" });
+app.get('/', (_req, res) => {
+  res.json({ message: 'Welcome to Asset Management Backend API' });
 });
 
-// User Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api', masterDataRoutes);
+app.use('/api/items', itemRoutes);
+app.use('/api/purchase-histories', purchaseHistoryRoutes);
+app.use('/api/users', userManagementRoutes);
+app.use('/api/roles', roleRoutes);
+
+// Legacy auth endpoints kept for compatibility with the existing frontend.
 app.post('/api/user/create', createUser);
 app.post('/api/login', loginUser);
-app.get('/api/user', getUsers);
-app.get('/api/user/:id', getUserById);
-app.delete('/api/user/:id', deleteUser);
 app.post('/api/forgot-password', forgotPassword);
 app.post('/api/verify-reset-code', verifyResetCode);
 app.post('/api/reset-password', resetPassword);
 
-// === Auth Routes ===
+const startServer = async () => {
+  try {
+    await ensureAuthorizationSetup();
 
-// google 
-app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
-app.get('/api/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login', session: false }), googleCallback);
+    app.listen(PORT, () => {
+      console.log(`Server is running smoothly on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
 
-// github
-app.get('/api/auth/github', passport.authenticate('github', { scope: ['user:email', 'user:profile'], session: false }));
-app.get('/api/auth/github/callback', passport.authenticate('github', { failureRedirect: '/login', session: false }), githubCallback);
-
-
-// Jalankan Server
-app.listen(PORT, () => {
-    console.log(`Server is running smoothly on http://localhost:${PORT}`);
-});
+startServer();

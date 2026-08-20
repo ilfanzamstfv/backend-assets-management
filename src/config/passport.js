@@ -2,6 +2,11 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import prisma from './prisma.js';
+import { getDefaultRoleId } from '../services/bootstrapService.js';
+
+const oauthUserInclude = {
+  role: true,
+};
 
 // --- Strategy Google ---
 passport.use(
@@ -24,23 +29,37 @@ passport.use(
           where: {
             OR: [{ googleId: profile.id }, { email }],
           },
+          include: oauthUserInclude,
         });
 
         if (user && !user.googleId) {
           user = await prisma.user.update({
             where: { id: user.id },
             data: { googleId: profile.id, avatar: profile.photos?.[0]?.value || user.avatar },
+            include: oauthUserInclude,
           });
         }
 
         if (!user) {
+          const roleId = await getDefaultRoleId();
           user = await prisma.user.create({
             data: {
               googleId: profile.id,
               email,
               name: profile.displayName,
               avatar: profile.photos?.[0]?.value || null,
+              roleId,
             },
+            include: oauthUserInclude,
+          });
+        }
+
+        if (user && !user.role) {
+          const roleId = await getDefaultRoleId();
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { roleId },
+            include: oauthUserInclude,
           });
         }
 
@@ -63,7 +82,7 @@ passport.use(
     },
     async (accessToken, _refreshToken, profile, done) => {
       try {
-        const email = profile.emails?.[0]?.value;
+        let email = profile.emails?.[0]?.value;
 
         if (!email) {
           const res = await fetch('https://api.github.com/user/emails', {
@@ -84,23 +103,37 @@ passport.use(
           where: {
             OR: [{ githubId: profile.id }, { email }]
           },
+          include: oauthUserInclude,
         });
 
         if (user && !user.githubId) {
           user = await prisma.user.update({
             where: { id: user.id },
             data: { githubId: profile.id, avatar: profile.photos?.[0]?.value || user.avatar },
+            include: oauthUserInclude,
           });
         }
 
         if (!user) {
+          const roleId = await getDefaultRoleId();
           user = await prisma.user.create({
             data: {
               githubId: profile.id,
               email: email,
               name: profile.displayName,
               avatar: profile.photos?.[0]?.value || null,
+              roleId,
             },
+            include: oauthUserInclude,
+          });
+        }
+
+        if (user && !user.role) {
+          const roleId = await getDefaultRoleId();
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { roleId },
+            include: oauthUserInclude,
           });
         }
 

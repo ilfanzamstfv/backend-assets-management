@@ -11,15 +11,129 @@ datasource db {
   provider = "postgresql"
 }
 
+enum userStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum itemStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model user {
-  id                 Int       @id @default(autoincrement())
-  email              String    @unique
+  id                 Int               @id @default(autoincrement())
+  email              String            @unique
   name               String?
   password           String?
-  googleId           String?   @unique
-  githubId           String?   @unique
+  googleId           String?           @unique
+  githubId           String?           @unique
   avatar             String?
-  createdAt          DateTime  @default(now())
+  status             userStatus        @default(ACTIVE)
+  roleId             Int?
+  role               role?             @relation(fields: [roleId], references: [id])
+  createdPurchases   purchaseHistory[] @relation("purchaseInputBy")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @default(now()) @updatedAt
   resetPasswordCode  String?
   resetCodeExpiresAt DateTime?
+}
+
+model role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String?
+  isSystem    Boolean          @default(false)
+  users       user[]
+  permissions rolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model permission {
+  id          Int              @id @default(autoincrement())
+  module      String
+  action      String
+  description String?
+  roles       rolePermission[]
+  createdAt   DateTime         @default(now())
+
+  @@unique([module, action])
+}
+
+model rolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  role         role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model category {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  items       item[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model location {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  items       item[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model supplier {
+  id                Int               @id @default(autoincrement())
+  name              String            @unique
+  email             String?
+  phone             String?
+  address           String?
+  items             item[]
+  purchaseHistories purchaseHistory[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model item {
+  id                Int               @id @default(autoincrement())
+  name              String
+  sku               String            @unique
+  categoryId        Int
+  locationId        Int
+  supplierId        Int
+  stock             Int
+  unit              String
+  lastPurchasePrice Decimal           @default(0) @db.Decimal(18, 2)
+  description       String?
+  status            itemStatus        @default(ACTIVE)
+  category          category          @relation(fields: [categoryId], references: [id])
+  location          location          @relation(fields: [locationId], references: [id])
+  supplier          supplier          @relation(fields: [supplierId], references: [id])
+  purchaseHistories purchaseHistory[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model purchaseHistory {
+  id           Int       @id @default(autoincrement())
+  itemId       Int
+  supplierId   Int
+  quantity     Int
+  unitPrice    Decimal   @db.Decimal(18, 2)
+  totalPrice   Decimal   @db.Decimal(18, 2)
+  purchaseDate DateTime
+  inputById    Int
+  note         String?
+  item         item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  supplier     supplier  @relation(fields: [supplierId], references: [id])
+  inputBy      user      @relation("purchaseInputBy", fields: [inputById], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }

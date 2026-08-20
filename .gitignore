@@ -6,3 +6,5 @@ node_modules
 .env.production
 
 /src/generated/prisma
+
+PRD-Asset-Management-System.md

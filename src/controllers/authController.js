@@ -1,15 +1,10 @@
-import jwt from 'jsonwebtoken';
+import { signAuthToken } from '../utils/jwt.js';
 
 // Google callback
 export const googleCallback = (req, res) => {
   try {
     const user = req.user;
-
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signAuthToken(user);
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
@@ -22,12 +17,7 @@ export const googleCallback = (req, res) => {
 export const githubCallback = (req, res) => {
   try {
     const user = req.user;
-
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signAuthToken(user);
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
