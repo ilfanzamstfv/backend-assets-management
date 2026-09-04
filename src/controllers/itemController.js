@@ -148,11 +148,15 @@ export const deleteItem = async (req, res) => {
 
     const item = await prisma.item.update({
       where: { id: Number(req.params.id) },
-      data: { status: 'INACTIVE' },
+      data: { status: existing.status === 'INACTIVE' ? 'ACTIVE' : 'INACTIVE' },
       include: itemInclude,
     });
 
-    res.json({ status: 'success', data: item, message: 'Item archived successfully' });
+    res.json({
+      status: 'success',
+      data: item,
+      message: item.status === 'ACTIVE' ? 'Item activated successfully' : 'Item archived successfully',
+    });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
